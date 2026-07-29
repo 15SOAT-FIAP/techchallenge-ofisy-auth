@@ -13,3 +13,9 @@ type UserRepository interface {
 type AuthUseCase struct {
 	userRepo UserRepository
 }
+
+func NewAuthUseCase(userRepo UserRepository) *AuthUseCase {
+	return &AuthUseCase{
+		userRepo: userRepo,
+	}
+}
