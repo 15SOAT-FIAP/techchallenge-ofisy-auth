@@ -33,21 +33,27 @@ func isValidCpf(cpf string) bool {
 	return checkCpfDigits(cpf, 10) && checkCpfDigits(cpf, 11)
 }
 
-func checkCpfDigits(digits string, position int) bool {
-	sum := 0
-	for i := 0; i < position-1; i++ {
-		digit := int(digits[i] - '0')
-		sum += digit * (position - i)
+func checkCpfDigits(digits string, checkDigitPos int) bool {
+	equal := true
+	firstDigit := digits[0]
+	for _, d := range digits {
+		if d != rune(firstDigit) {
+			equal = false
+			break
+		}
 	}
 
-	remainder := sum % 11
-	expected := 0
-	if remainder < 2 {
-		expected = 0
-	} else {
-		expected = 11 - remainder
+	if equal {
+		return false
 	}
-	return expected == int(digits[position-1]-'0')
+
+	sum := 0
+	for i := 0; i < checkDigitPos-1; i++ {
+		digit := int(digits[i] - '0')
+		sum += digit * (checkDigitPos - i)
+	}
+
+	return checkDigit(sum) == int(digits[checkDigitPos-1]-'0')
 }
 
 func isValidCnpj(cnpj string) bool {
@@ -57,18 +63,33 @@ func isValidCnpj(cnpj string) bool {
 	return checkCnpjDigits(cnpj, firstWeights, 12) && checkCnpjDigits(cnpj, secondWeights, 13)
 }
 
-func checkCnpjDigits(digits string, weights []int, position int) bool {
+func checkCnpjDigits(digits string, weights []int, checkDigitPos int) bool {
+	equal := true
+	firstDigit := digits[0]
+	for _, d := range digits {
+		if d != rune(firstDigit) {
+			equal = false
+			break
+		}
+	}
+
+	if equal {
+		return false
+	}
+
 	sum := 0
-	for i := 0; i < len(weights); i++ {
+	for i := 0; i < checkDigitPos; i++ {
 		digit := int(digits[i] - '0')
 		sum += digit * weights[i]
 	}
+
+	return checkDigit(sum) == int(digits[checkDigitPos]-'0')
+}
+
+func checkDigit(sum int) int {
 	remainder := sum % 11
-	expected := 0
 	if remainder < 2 {
-		expected = 0
-	} else {
-		expected = 11 - remainder
+		return 0
 	}
-	return expected == int(digits[position]-'0')
+	return 11 - remainder
 }
