@@ -3,6 +3,8 @@ package customers
 import (
 	"context"
 	"database/sql"
+	"errors"
+	"fmt"
 	"log/slog"
 
 	"github.com/15SOAT-FIAP/techchallenge-ofisy-auth/internal/models"
@@ -25,12 +27,12 @@ func (u *Customers) GetCustomerByCpfCnpj(ctx context.Context, cpfCnpj string) (*
 	WHERE cpf_cnpj = $1
 	`, cpfCnpj)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			slog.Warn("customer not found", "cpf_cnpj", cpfCnpj)
 			return nil, sql.ErrNoRows
 		}
 		slog.Error("failed to get customer by cpf_cnpj", "cpf_cnpj", cpfCnpj, "error", err)
-		return nil, err
+		return nil, fmt.Errorf("failed to get customer by cpf_cnpj: %w", err)
 	}
 	return &customer, nil
 }
