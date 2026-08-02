@@ -2,8 +2,6 @@ package validators
 
 import (
 	"testing"
-
-	"github.com/stretchr/testify/assert"
 )
 
 func TestIsValidCpfCnpj_CPF(t *testing.T) {
@@ -21,7 +19,9 @@ func TestIsValidCpfCnpj_CPF(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.want, IsValidCpfCnpj(tt.input))
+			if got := IsValidCpfCnpj(tt.input); got != tt.want {
+				t.Errorf("IsValidCpfCnpj(%q) = %v, esperado %v", tt.input, got, tt.want)
+			}
 		})
 	}
 }
@@ -41,7 +41,9 @@ func TestIsValidCpfCnpj_CNPJ(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.want, IsValidCpfCnpj(tt.input))
+			if got := IsValidCpfCnpj(tt.input); got != tt.want {
+				t.Errorf("IsValidCpfCnpj(%q) = %v, esperado %v", tt.input, got, tt.want)
+			}
 		})
 	}
 }
@@ -59,7 +61,9 @@ func TestIsValidCpfCnpj_InvalidInputs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.False(t, IsValidCpfCnpj(tt.input))
+			if IsValidCpfCnpj(tt.input) {
+				t.Errorf("IsValidCpfCnpj(%q) = true, esperado false", tt.input)
+			}
 		})
 	}
 }
