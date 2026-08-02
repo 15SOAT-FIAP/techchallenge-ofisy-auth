@@ -19,9 +19,9 @@ func New(db *sqlx.DB) *Customers {
 	return &Customers{db: db}
 }
 
-func (u *Customers) GetCustomerByCpfCnpj(ctx context.Context, cpfCnpj string) (*models.Customer, error) {
+func (c *Customers) GetCustomerByCpfCnpj(ctx context.Context, cpfCnpj string) (*models.Customer, error) {
 	var customer models.Customer
-	err := u.db.GetContext(ctx, &customer, `
+	err := c.db.GetContext(ctx, &customer, `
 	SELECT id, active
 	FROM customers
 	WHERE cpf_cnpj = $1
