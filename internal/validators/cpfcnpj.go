@@ -34,16 +34,7 @@ func isValidCpf(cpf string) bool {
 }
 
 func checkCpfDigits(digits string, checkDigitPos int) bool {
-	equal := true
-	firstDigit := digits[0]
-	for _, d := range digits {
-		if d != rune(firstDigit) {
-			equal = false
-			break
-		}
-	}
-
-	if equal {
+	if allDigitsEqual(digits) {
 		return false
 	}
 
@@ -64,16 +55,7 @@ func isValidCnpj(cnpj string) bool {
 }
 
 func checkCnpjDigits(digits string, weights []int, checkDigitPos int) bool {
-	equal := true
-	firstDigit := digits[0]
-	for _, d := range digits {
-		if d != rune(firstDigit) {
-			equal = false
-			break
-		}
-	}
-
-	if equal {
+	if allDigitsEqual(digits) {
 		return false
 	}
 
@@ -84,6 +66,15 @@ func checkCnpjDigits(digits string, weights []int, checkDigitPos int) bool {
 	}
 
 	return checkDigit(sum) == int(digits[checkDigitPos]-'0')
+}
+
+func allDigitsEqual(digits string) bool {
+	for _, d := range digits {
+		if d != rune(digits[0]) {
+			return false
+		}
+	}
+	return true
 }
 
 func checkDigit(sum int) int {
