@@ -17,9 +17,13 @@ func main() {
 
 	db, err := database.NewPostgresConnection(cfg.DB)
 	if err != nil {
-		log.Fatalf("failed to connect to database: %v", err)
+		log.Fatalf("postgres: failed to connect to database: %v", err)
 	}
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			log.Printf("postgres: failed to close database connection: %v", err)
+		}
+	}()
 
 	customerRepo := customers.New(db)
 	authUseCase := usecases.NewAuthUseCase(customerRepo)
