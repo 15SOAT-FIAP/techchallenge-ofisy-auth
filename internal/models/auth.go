@@ -5,30 +5,16 @@ import (
 	"github.com/google/uuid"
 )
 
-type Role string
-
-const (
-	RoleAdmin     Role = "ADMIN"
-	RoleAttendant Role = "ATTENDANT"
-	RoleMechanic  Role = "MECHANIC"
-	RoleStockman  Role = "STOCKMAN"
-)
-
-type User struct {
-	ID       uuid.UUID
-	Name     string
-	Email    string
-	Password string
-	Role     Role
-	Active   bool
+type Customer struct {
+	ID     uuid.UUID
+	Active bool
 }
 
-type LoginRequest struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
+type AuthRequest struct {
+	CpfCnpj string `json:"cpfCnpj"`
 }
 
-type LoginResponse struct {
+type AuthResponse struct {
 	Token string `json:"token"`
 }
 

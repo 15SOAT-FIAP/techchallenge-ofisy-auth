@@ -6,10 +6,10 @@ import (
 	"github.com/15SOAT-FIAP/techchallenge-ofisy-auth/internal/models"
 )
 
-type UserRepository interface {
-	GetUserByEmail(ctx context.Context, email string) (*models.User, error)
+type CustomerRepository interface {
+	GetCustomerByCpfCnpj(ctx context.Context, cpfCnpj string) (*models.Customer, error)
 }
 
 type AuthUseCase struct {
-	userRepo UserRepository
+	customerRepo CustomerRepository
 }
