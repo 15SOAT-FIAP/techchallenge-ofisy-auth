@@ -4,6 +4,7 @@ import (
 	"maps"
 	"strings"
 	"testing"
+	"time"
 )
 
 var allEnvKeys = []string{
@@ -80,8 +81,8 @@ func TestLoad(t *testing.T) {
 			if cfg.DB.SSLMode != "disable" {
 				t.Errorf("DB.SSLMode = %q, esperado default %q", cfg.DB.SSLMode, "disable")
 			}
-			if cfg.JWT.Expiration != 86400000 {
-				t.Errorf("JWT.Expiration = %d, esperado default %d", cfg.JWT.Expiration, 86400000)
+			if cfg.JWT.Expiration != time.Hour {
+				t.Errorf("JWT.Expiration = %s, esperado default %s", cfg.JWT.Expiration, time.Hour)
 			}
 		})
 	}
@@ -96,7 +97,7 @@ func TestLoad_CustomValues(t *testing.T) {
 		"POSTGRES_DB":       "dbname",
 		"POSTGRES_SSL_MODE": "require",
 		"JWT_SECRET":        "secret",
-		"JWT_EXPIRATION":    "3600",
+		"JWT_EXPIRATION":    "2h",
 	})
 
 	cfg, err := Load()
@@ -113,8 +114,8 @@ func TestLoad_CustomValues(t *testing.T) {
 	if cfg.DB.SSLMode != "require" {
 		t.Errorf("DB.SSLMode = %q, esperado %q", cfg.DB.SSLMode, "require")
 	}
-	if cfg.JWT.Expiration != 3600 {
-		t.Errorf("JWT.Expiration = %d, esperado %d", cfg.JWT.Expiration, 3600)
+	if cfg.JWT.Expiration != 2*time.Hour {
+		t.Errorf("JWT.Expiration = %s, esperado %s", cfg.JWT.Expiration, 2*time.Hour)
 	}
 }
 
@@ -178,45 +179,45 @@ func TestGetEnv(t *testing.T) {
 	}
 }
 
-func TestGetEnvAsInt64(t *testing.T) {
+func TestGetEnvAsDuration(t *testing.T) {
 	tests := []struct {
 		name         string
 		envValue     string
 		envSet       bool
-		defaultValue int64
-		want         int64
+		defaultValue time.Duration
+		want         time.Duration
 	}{
 		{
 			name:         "retorna valor parseado quando definido",
-			envValue:     "12345",
+			envValue:     "12h",
 			envSet:       true,
-			defaultValue: 999,
-			want:         12345,
+			defaultValue: 999 * time.Second,
+			want:         12 * time.Hour,
 		},
 		{
 			name:         "retorna default quando variavel nao definida",
 			envSet:       false,
-			defaultValue: 999,
-			want:         999,
+			defaultValue: 999 * time.Second,
+			want:         999 * time.Second,
 		},
 		{
-			name:         "retorna default quando valor nao numerico",
-			envValue:     "not-a-number",
+			name:         "retorna default quando valor invalido",
+			envValue:     "not-a-duration",
 			envSet:       true,
-			defaultValue: 999,
-			want:         999,
+			defaultValue: 999 * time.Second,
+			want:         999 * time.Second,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			const key = "CONFIG_TEST_GETENVASINT64"
+			const key = "CONFIG_TEST_GETENVASDURATION"
 			if tt.envSet {
 				t.Setenv(key, tt.envValue)
 			}
 
-			if got := getEnvAsInt64(key, tt.defaultValue); got != tt.want {
-				t.Errorf("getEnvAsInt64() = %d, esperado %d", got, tt.want)
+			if got := getEnvAsDuration(key, tt.defaultValue); got != tt.want {
+				t.Errorf("getEnvAsDuration() = %s, esperado %s", got, tt.want)
 			}
 		})
 	}
