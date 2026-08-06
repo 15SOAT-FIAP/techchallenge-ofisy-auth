@@ -12,9 +12,11 @@ import (
 type stubCustomerRepository struct {
 	customer *models.Customer
 	err      error
+	calls    int
 }
 
 func (s *stubCustomerRepository) GetCustomerByCpfCnpj(ctx context.Context, cpfCnpj string) (*models.Customer, error) {
+	s.calls++
 	return s.customer, s.err
 }
 
@@ -27,6 +29,21 @@ type stubJWTGenerator struct {
 func (s *stubJWTGenerator) GenerateToken(customerID string) (string, error) {
 	s.receivedCustomerID = customerID
 	return s.token, s.err
+}
+
+func TestAuthenticate_InvalidCpfCnpjFormat(t *testing.T) {
+	repo := &stubCustomerRepository{}
+	jwtGen := &stubJWTGenerator{}
+	uc := NewAuthUseCase(repo, jwtGen)
+
+	_, err := uc.Authenticate(context.Background(), "123")
+
+	if !errors.Is(err, ErrInvalidCredentials) {
+		t.Errorf("erro = %v, esperado ErrInvalidCredentials", err)
+	}
+	if repo.calls != 0 {
+		t.Errorf("repositorio foi chamado %d vezes, esperado 0 (cpf/cnpj invalido deve ser rejeitado antes)", repo.calls)
+	}
 }
 
 func TestAuthenticate_CustomerNotFound(t *testing.T) {
