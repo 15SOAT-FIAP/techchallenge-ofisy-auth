@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"strconv"
 	"strings"
+	"time"
 )
 
 type Config struct {
@@ -24,7 +24,7 @@ type DatabaseConfig struct {
 
 type JWTConfig struct {
 	Secret     string
-	Expiration int64
+	Expiration time.Duration
 }
 
 func (dc DatabaseConfig) BuildDSN() string {
@@ -46,7 +46,7 @@ func Load() (*Config, error) {
 		},
 		JWT: JWTConfig{
 			Secret:     os.Getenv("JWT_SECRET"),
-			Expiration: getEnvAsInt64("JWT_EXPIRATION", 86400000),
+			Expiration: getEnvAsDuration("JWT_EXPIRATION", time.Hour),
 		},
 	}
 
@@ -71,13 +71,13 @@ func Load() (*Config, error) {
 	return cfg, nil
 }
 
-func getEnvAsInt64(key string, defaultValue int64) int64 {
-	num, err := strconv.ParseInt(os.Getenv(key), 10, 64)
+func getEnvAsDuration(key string, defaultValue time.Duration) time.Duration {
+	d, err := time.ParseDuration(os.Getenv(key))
 	if err != nil {
-		slog.Warn("failed to parse env as int64", "key", key, "value", os.Getenv(key))
+		slog.Warn("failed to parse env as duration", "key", key, "value", os.Getenv(key))
 		return defaultValue
 	}
-	return num
+	return d
 }
 
 func getEnv(key, defaultValue string) string {
