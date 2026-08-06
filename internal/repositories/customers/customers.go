@@ -8,6 +8,7 @@ import (
 	"log/slog"
 
 	"github.com/15SOAT-FIAP/techchallenge-ofisy-auth/internal/models"
+	"github.com/15SOAT-FIAP/techchallenge-ofisy-auth/internal/usecases"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -29,7 +30,7 @@ func (c *Customers) GetCustomerByCpfCnpj(ctx context.Context, cpfCnpj string) (*
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			slog.Warn("customer not found", "cpf_cnpj", cpfCnpj)
-			return nil, sql.ErrNoRows
+			return nil, usecases.ErrCustomerNotFound
 		}
 		slog.Error("failed to get customer by cpf_cnpj", "cpf_cnpj", cpfCnpj, "error", err)
 		return nil, fmt.Errorf("failed to get customer by cpf_cnpj: %w", err)

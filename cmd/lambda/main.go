@@ -5,6 +5,7 @@ import (
 
 	"github.com/15SOAT-FIAP/techchallenge-ofisy-auth/internal/config"
 	"github.com/15SOAT-FIAP/techchallenge-ofisy-auth/internal/database"
+	"github.com/15SOAT-FIAP/techchallenge-ofisy-auth/internal/jwt"
 	"github.com/15SOAT-FIAP/techchallenge-ofisy-auth/internal/repositories/customers"
 	"github.com/15SOAT-FIAP/techchallenge-ofisy-auth/internal/usecases"
 )
@@ -26,6 +27,7 @@ func main() {
 	}()
 
 	customerRepo := customers.New(db)
-	authUseCase := usecases.NewAuthUseCase(customerRepo)
+	jwtGenerator := jwt.NewGenerator(cfg.JWT.Secret, cfg.JWT.Expiration)
+	authUseCase := usecases.NewAuthUseCase(customerRepo, jwtGenerator)
 	_ = authUseCase // por enquanto nao tem handler implementado
 }
