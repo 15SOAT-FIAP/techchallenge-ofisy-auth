@@ -7,6 +7,7 @@ import (
 	"log/slog"
 
 	"github.com/15SOAT-FIAP/techchallenge-ofisy-auth/internal/models"
+	"github.com/15SOAT-FIAP/techchallenge-ofisy-auth/internal/validators"
 )
 
 type CustomerRepository interface {
@@ -30,6 +31,12 @@ func NewAuthUseCase(customerRepo CustomerRepository, jwtGenerator JWTGenerator) 
 }
 
 func (a *AuthUseCase) Authenticate(ctx context.Context, cpfCnpj string) (*models.AuthResponse, error) {
+	isCpfCnpjValid := validators.IsValidCpfCnpj(cpfCnpj)
+	if !isCpfCnpjValid {
+		slog.Warn("invalid cpf_cnpj format")
+		return nil, ErrInvalidCredentials
+	}
+
 	customer, err := a.customerRepo.GetCustomerByCpfCnpj(ctx, cpfCnpj)
 	if err != nil {
 		if errors.Is(err, ErrCustomerNotFound) {
