@@ -5,9 +5,11 @@ import (
 
 	"github.com/15SOAT-FIAP/techchallenge-ofisy-auth/internal/config"
 	"github.com/15SOAT-FIAP/techchallenge-ofisy-auth/internal/database"
+	"github.com/15SOAT-FIAP/techchallenge-ofisy-auth/internal/handlers"
 	"github.com/15SOAT-FIAP/techchallenge-ofisy-auth/internal/jwt"
 	"github.com/15SOAT-FIAP/techchallenge-ofisy-auth/internal/repositories/customers"
 	"github.com/15SOAT-FIAP/techchallenge-ofisy-auth/internal/usecases"
+	"github.com/aws/aws-lambda-go/lambda"
 )
 
 func main() {
@@ -29,5 +31,7 @@ func main() {
 	customerRepo := customers.New(db)
 	jwtGenerator := jwt.NewGenerator(cfg.JWT.Secret, cfg.JWT.Expiration)
 	authUseCase := usecases.NewAuthUseCase(customerRepo, jwtGenerator)
-	_ = authUseCase // por enquanto nao tem handler implementado
+	authHandler := handlers.NewAuthHandler(authUseCase)
+
+	lambda.Start(authHandler.Handle)
 }
