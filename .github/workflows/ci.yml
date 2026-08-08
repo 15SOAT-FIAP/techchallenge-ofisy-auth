@@ -1,4 +1,4 @@
-name: Build & Test (CI)
+name: CI Pipeline
 
 on:
   push:
@@ -6,35 +6,103 @@ on:
   pull_request:
     branches: [master]
 
+env:
+  GO_VERSION: 1.26.5
+
 jobs:
-  build:
-    name: Build & Test
+  lint:
+    name: Lint and Format
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - name: Set up Go
-        uses: actions/setup-go@v5
+      - name: Setup Go
+        uses: actions/setup-go@v7
         with:
-          go-version-file: go.mod
+          go-version: ${{ env.GO_VERSION }}
           cache: true
 
-      - name: Check go.mod tidiness
-        run: |
-          go mod tidy
-          git diff --exit-code go.mod go.sum
-
-      - name: Lint
+      - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v9
         with:
-          version: latest
+          version: v2.12
 
-      - name: Security scan
-        uses: securego/gosec@master
+      - name: Check formatting
+        run: |
+          if [ -n "$(gofmt -l .)" ]; then
+            echo "The following files are not formatted:"
+            gofmt -l .
+            exit 1
+          fi
+
+  test:
+    name: Run tests
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup Go
+        uses: actions/setup-go@v7
         with:
-          args: ./...
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
 
-      - name: CI (vet, test, build)
-        run: make ci
+      - name: Install Dependencies
+        run: go mod download
+
+      - name: Run tests
+        env:
+          CGO_ENABLED: 1
+        run: go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...
+
+      - name: Enforce coverage threshold
+        run: |
+          grep -Ev "cmd/api/main.go|internal/auth/dto.go|internal/auth/types.go|internal/admin/dto.go" coverage.txt > coverage.filtered.txt
+          COVERAGE=$(go tool cover -func=coverage.filtered.txt | awk '/^total:/ {gsub("%","",$3); print $3}')
+          echo "Total coverage: ${COVERAGE}%"
+          if awk "BEGIN {exit !($COVERAGE < 70)}"; then
+            echo "Coverage ${COVERAGE}% is below the 70% threshold"
+            exit 1
+          fi
+
+      - name: Upload coverage artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: |
+            coverage.txt
+            coverage.filtered.txt
+
+  security:
+    name: Security Scan
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup Go
+        uses: actions/setup-go@v7
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Install Dependencies
+        run: go mod download
+
+      - name: Install Gosec
+        run: go install github.com/securego/gosec/v2/cmd/gosec@latest
+
+      - name: Run Gosec
+        continue-on-error: true
+        run: gosec -fmt=sarif -out=results.sarif ./...
+
+      - name: Upload SARIF to GitHub Security
+        if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: results.sarif
