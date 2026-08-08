@@ -1,4 +1,16 @@
 services:
+  localstack:
+    image: localstack/localstack:4.13.1
+    container_name: localstack-auth
+    ports:
+      - "4566:4566"
+    environment:
+      - SERVICES=lambda,logs
+      - AWS_DEFAULT_REGION=us-east-1
+    volumes:
+      - "./volume:/var/lib/localstack"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+
   postgres:
     image: postgres:16
     container_name: postgres-auth-local-db
