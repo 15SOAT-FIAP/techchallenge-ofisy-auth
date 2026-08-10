@@ -1,9 +1,16 @@
-.PHONY: ci build test test-race vet tidy run dev-up dev-down docker-build clean lambda-deploy lambda-invoke lambda-seed
+.PHONY: ci pre-commit build test test-race cover-check vet fmt fmt-check lint sec tidy run \
+	dev-up dev-down docker-build clean lambda-seed lambda-deploy lambda-invoke
 
 LOCALSTACK_ENDPOINT := http://localhost:4566
 LAMBDA_FUNCTION_NAME := ofisy-auth
 
+COVERAGE_THRESHOLD := 70
+COVERAGE_EXCLUDE := cmd/api/main.go|internal/auth/dto.go|internal/auth/types.go|internal/admin/dto.go
+
 ci: tidy vet test-race build
+
+pre-commit: tidy fmt-check vet lint test-race cover-check sec
+	@echo "pre-commit checks passed"
 
 build:
 	@CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -tags lambda.norpc -o bootstrap ./cmd/lambda
@@ -12,10 +19,35 @@ test:
 	@go test ./... -cover
 
 test-race:
-	@go test ./... -race -cover
+	@CGO_ENABLED=1 go test ./... -race -coverprofile=coverage.txt -covermode=atomic
+
+cover-check: test-race
+	@grep -Ev "$(COVERAGE_EXCLUDE)" coverage.txt > coverage.filtered.txt
+	@COVERAGE=$$(go tool cover -func=coverage.filtered.txt | awk '/^total:/ {gsub("%","",$$3); print $$3}'); \
+	echo "Total coverage: $${COVERAGE}%"; \
+	if awk "BEGIN {exit !($$COVERAGE < $(COVERAGE_THRESHOLD))}"; then \
+		echo "Coverage $${COVERAGE}% is below the $(COVERAGE_THRESHOLD)% threshold"; \
+		exit 1; \
+	fi
 
 vet:
 	@go vet ./...
+
+fmt:
+	@gofmt -w .
+
+fmt-check:
+	@if [ -n "$$(gofmt -l .)" ]; then \
+		echo "The following files are not formatted (run 'make fmt'):"; \
+		gofmt -l .; \
+		exit 1; \
+	fi
+
+lint:
+	@golangci-lint run ./...
+
+sec:
+	@gosec -quiet ./...
 
 tidy:
 	@go mod tidy
