@@ -30,7 +30,7 @@ techchallenge-ofisy-auth/
 │   ├── repositories/customers/  # consulta ao cliente por cpf/cnpj
 │   ├── usecases/                # regra de autenticação (Authenticate)
 │   └── validators/              # validação de CPF/CNPJ
-├── compose.db.yaml              # Postgres local
+├── compose.yaml                 # LocalStack (Lambda) + Postgres local
 ├── Dockerfile                   # build da imagem da Lambda
 ├── Makefile
 └── go.mod
@@ -122,12 +122,28 @@ JWT_EXPIRATION=1h
 ## Rodando o projeto
 
 ```bash
-make db-up      # sobe o Postgres local (compose.db.yaml)
+make dev-up     # sobe LocalStack (Lambda) + Postgres local (compose.yaml)
 make test       # roda os testes unitários com cobertura
 make vet        # go vet
 make build      # compila o binário bootstrap (linux/arm64)
 ```
 
-Hoje `make run` (`go run ./cmd/lambda`) sobe a aplicação e conecta no Postgres, mas `lambda.Start` exige as variáveis de ambiente da Runtime API da AWS ou a ponte RPC do SAM CLI. Sem um `template.yaml` configurado, ainda não dá pra mandar requisição HTTP contra a Lambda localmente. Por enquanto a validação de ponta a ponta fica por conta dos testes unitários (`internal/handlers`, `internal/usecases`, `internal/jwt`), que cobrem os quatro caminhos de resposta (200/400/401/500) com dublês do banco e do gerador de token.
+`make run` (`go run ./cmd/lambda`) sobe a aplicação e conecta no Postgres, mas `lambda.Start` exige as variáveis de ambiente da Runtime API da AWS ou a ponte RPC do SAM CLI — não dá pra mandar requisição HTTP direto contra esse processo.
 
-`make db-down` derruba o Postgres local quando terminar.
+Para validar a Lambda de ponta a ponta sem subir o ambiente AWS real, use o LocalStack:
+
+```bash
+make dev-up           # sobe LocalStack + Postgres
+make lambda-deploy     # builda, empacota e registra a função no LocalStack
+make lambda-invoke     # invoca a função com um payload de teste
+```
+
+`make lambda-deploy` cria a função `ofisy-auth` (runtime `provided.al2023`/arm64) apontando para o Postgres do compose (hostname `postgres`, mesma rede Docker). O `scripts/seed.sql` popula a tabela `customers` com registros de teste; rode-o manualmente se precisar recriá-la:
+
+```bash
+docker exec -i postgres-auth-local-db psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" < scripts/seed.sql
+```
+
+Além disso, os testes unitários (`internal/handlers`, `internal/usecases`, `internal/jwt`) cobrem os quatro caminhos de resposta (200/400/401/500) com dublês do banco e do gerador de token.
+
+`make dev-down` derruba o LocalStack e o Postgres local quando terminar.
