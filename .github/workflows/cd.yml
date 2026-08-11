@@ -1,0 +1,79 @@
+name: Deploy da Lambda na AWS (CD)
+
+on:
+  workflow_run:
+    workflows: ["CI Pipeline"]
+    branches: [master]
+    types:
+      - completed
+  workflow_dispatch:
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: ofisy-auth
+  LAMBDA_FUNCTION_NAME: ofisy-auth
+
+jobs:
+  deploy-lambda:
+    name: Publicar Imagem no ECR e Atualizar a Lambda
+    runs-on: ubuntu-latest
+    environment: AWS_ACADEMY
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Configurar Credenciais AWS
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Definir Tag da Imagem
+        run: echo "IMAGE_TAG=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+
+      - name: Login no Amazon ECR
+        run: |
+          aws ecr get-login-password --region ${{ env.AWS_REGION }} \
+            | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com
+
+      - name: Configurar Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Enviar Imagem para o ECR
+        run: |
+          IMAGE_URI=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
+          echo "IMAGE_URI=$IMAGE_URI" >> $GITHUB_ENV
+
+          docker buildx build \
+            --platform linux/arm64 \
+            --provenance=false \
+            -t $IMAGE_URI \
+            --push .
+
+      - name: Atualizar Código da Lambda
+        run: |
+          if ! aws lambda get-function --function-name ${{ env.LAMBDA_FUNCTION_NAME }} --region ${{ env.AWS_REGION }} > /dev/null 2>&1; then
+            echo "### Imagem publicada, função ainda não provisionada" >> $GITHUB_STEP_SUMMARY
+            echo "- Imagem: \`${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}\`" >> $GITHUB_STEP_SUMMARY
+            echo "- Rode o workflow **Deploy Lambda de Autenticação** no repositório \`techchallenge-ofisy-eks-infra\` informando esta tag em \`image_tag\`." >> $GITHUB_STEP_SUMMARY
+            exit 0
+          fi
+
+          aws lambda update-function-code \
+            --function-name ${{ env.LAMBDA_FUNCTION_NAME }} \
+            --image-uri ${{ env.IMAGE_URI }} \
+            --region ${{ env.AWS_REGION }} > /dev/null
+
+          aws lambda wait function-updated \
+            --function-name ${{ env.LAMBDA_FUNCTION_NAME }} \
+            --region ${{ env.AWS_REGION }}
+
+          echo "### Lambda atualizada com sucesso" >> $GITHUB_STEP_SUMMARY
+          echo "- Função: ${{ env.LAMBDA_FUNCTION_NAME }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Imagem: ${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}" >> $GITHUB_STEP_SUMMARY
