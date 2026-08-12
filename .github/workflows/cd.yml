@@ -1,11 +1,6 @@
 name: Deploy da Lambda na AWS (CD)
 
 on:
-  workflow_run:
-    workflows: ["CI Pipeline"]
-    branches: [master]
-    types:
-      - completed
   workflow_dispatch:
 
 env:
@@ -18,13 +13,23 @@ jobs:
     name: Publicar Imagem no ECR e Atualizar a Lambda
     runs-on: ubuntu-latest
     environment: AWS_ACADEMY
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
 
     steps:
       - name: Checkout do código
         uses: actions/checkout@v7
-        with:
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Verificar se a CI passou para este commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          CONCLUSION=$(gh api "repos/${{ github.repository }}/actions/workflows/ci.yml/runs?head_sha=${{ github.sha }}&status=completed" --jq '.workflow_runs[0].conclusion')
+
+          if [ "$CONCLUSION" != "success" ]; then
+            echo "A CI Pipeline não terminou com sucesso para o commit ${{ github.sha }} (conclusion=$CONCLUSION)."
+            exit 1
+          fi
+
+          echo "CI Pipeline concluída com sucesso para este commit."
 
       - name: Configurar Credenciais AWS
         uses: aws-actions/configure-aws-credentials@v6
