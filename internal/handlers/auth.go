@@ -26,7 +26,7 @@ func NewAuthHandler(authenticator Authenticator) *AuthHandler {
 	}
 }
 
-func (h *AuthHandler) Handle(ctx context.Context, req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+func (h *AuthHandler) Handle(ctx context.Context, req events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
 	var authRequest models.AuthRequest
 	if err := json.Unmarshal([]byte(req.Body), &authRequest); err != nil {
 		return errorResponse(http.StatusBadRequest, "Corpo da requisição inválido"), nil
@@ -42,16 +42,16 @@ func (h *AuthHandler) Handle(ctx context.Context, req events.APIGatewayProxyRequ
 	}
 	body, _ := json.Marshal(resp)
 
-	return events.APIGatewayProxyResponse{
+	return events.APIGatewayV2HTTPResponse{
 		StatusCode: http.StatusOK,
 		Headers:    map[string]string{"Content-Type": "application/json"},
 		Body:       string(body),
 	}, nil
 }
 
-func errorResponse(status int, message string) events.APIGatewayProxyResponse {
+func errorResponse(status int, message string) events.APIGatewayV2HTTPResponse {
 	body, _ := json.Marshal(map[string]string{"error": message})
-	return events.APIGatewayProxyResponse{
+	return events.APIGatewayV2HTTPResponse{
 		StatusCode: status,
 		Headers:    map[string]string{"Content-Type": "application/json"},
 		Body:       string(body),

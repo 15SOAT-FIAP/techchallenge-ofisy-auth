@@ -40,7 +40,7 @@ func decodeErrorBody(t *testing.T, body string) string {
 func TestHandle_MalformedBody(t *testing.T) {
 	h := NewAuthHandler(&stubAuthenticator{})
 
-	resp, err := h.Handle(context.Background(), events.APIGatewayProxyRequest{Body: "not-json"})
+	resp, err := h.Handle(context.Background(), events.APIGatewayV2HTTPRequest{Body: "not-json"})
 
 	if err != nil {
 		t.Fatalf("erro inesperado do handler: %v", err)
@@ -54,7 +54,7 @@ func TestHandle_InvalidCredentials(t *testing.T) {
 	stub := &stubAuthenticator{err: usecases.ErrInvalidCredentials}
 	h := NewAuthHandler(stub)
 
-	resp, err := h.Handle(context.Background(), events.APIGatewayProxyRequest{Body: `{"cpfCnpj":"52998224725"}`})
+	resp, err := h.Handle(context.Background(), events.APIGatewayV2HTTPRequest{Body: `{"cpfCnpj":"52998224725"}`})
 
 	if err != nil {
 		t.Fatalf("erro inesperado do handler: %v", err)
@@ -74,7 +74,7 @@ func TestHandle_UnexpectedErrorDoesNotLeakDetail(t *testing.T) {
 	internalErr := errors.New("connection refused: pg_hba.conf rejects connection")
 	h := NewAuthHandler(&stubAuthenticator{err: internalErr})
 
-	resp, err := h.Handle(context.Background(), events.APIGatewayProxyRequest{Body: `{"cpfCnpj":"52998224725"}`})
+	resp, err := h.Handle(context.Background(), events.APIGatewayV2HTTPRequest{Body: `{"cpfCnpj":"52998224725"}`})
 
 	if err != nil {
 		t.Fatalf("erro inesperado do handler: %v", err)
@@ -94,7 +94,7 @@ func TestHandle_Success(t *testing.T) {
 	stub := &stubAuthenticator{resp: &models.AuthResponse{Token: "signed-token"}}
 	h := NewAuthHandler(stub)
 
-	resp, err := h.Handle(context.Background(), events.APIGatewayProxyRequest{Body: `{"cpfCnpj":"52998224725"}`})
+	resp, err := h.Handle(context.Background(), events.APIGatewayV2HTTPRequest{Body: `{"cpfCnpj":"52998224725"}`})
 
 	if err != nil {
 		t.Fatalf("erro inesperado do handler: %v", err)
