@@ -1,19 +1,22 @@
-.PHONY: ci pre-commit build test test-race cover-check vet fmt fmt-check lint sec tidy run \
-	dev-up dev-down docker-build clean lambda-seed lambda-deploy lambda-invoke
+.PHONY: ci pre-commit build build-authorizer test test-race cover-check vet fmt fmt-check lint sec tidy run \
+	dev-up dev-down docker-build docker-build-authorizer clean lambda-seed lambda-deploy lambda-deploy-authorizer lambda-invoke lambda-invoke-authorizer
 
 LOCALSTACK_ENDPOINT := http://localhost:4566
 LAMBDA_FUNCTION_NAME := ofisy-auth
-
+AUTHORIZER_FUNCTION_NAME := ofisy-auth-authorizer
 COVERAGE_THRESHOLD := 70
 COVERAGE_EXCLUDE := cmd/api/main.go|internal/auth/dto.go|internal/auth/types.go|internal/admin/dto.go
 
-ci: tidy vet test-race build
+ci: tidy vet test-race build build-authorizer
 
 pre-commit: tidy fmt-check vet lint test-race cover-check sec
 	@echo "pre-commit checks passed"
 
 build:
 	@CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -tags lambda.norpc -o bootstrap ./cmd/lambda
+
+build-authorizer:
+	@CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -tags lambda.norpc -o bootstrap-authorizer ./cmd/authorizer
 
 test:
 	@go test ./... -cover
@@ -64,8 +67,11 @@ dev-down:
 docker-build:
 	@docker build -t ofisy-auth-lambda .
 
+docker-build-authorizer:
+	@docker build -f Dockerfile.authorizer -t ofisy-auth-authorizer .
+
 clean:
-	@rm -f bootstrap function.zip
+	@rm -f bootstrap bootstrap-authorizer function.zip function-authorizer.zip
 
 lambda-seed:
 	@set -a && . ./.env && set +a && \
@@ -89,6 +95,24 @@ lambda-deploy: build
 		--zip-file fileb://function.zip \
 		--region us-east-1
 
+lambda-deploy-authorizer: build-authorizer
+	@zip -j function-authorizer.zip bootstrap-authorizer
+	@set -a && . ./.env && set +a && \
+	aws --endpoint-url=$(LOCALSTACK_ENDPOINT) lambda create-function \
+		--function-name $(AUTHORIZER_FUNCTION_NAME) \
+		--runtime provided.al2023 \
+		--architectures arm64 \
+		--handler bootstrap-authorizer \
+		--role arn:aws:iam::000000000000:role/lambda-role \
+		--zip-file fileb://function-authorizer.zip \
+		--timeout 10 \
+		--environment "Variables={JWT_SECRET=$$JWT_SECRET}" \
+		--region us-east-1 \
+	|| aws --endpoint-url=$(LOCALSTACK_ENDPOINT) lambda update-function-code \
+		--function-name $(AUTHORIZER_FUNCTION_NAME) \
+		--zip-file fileb://function-authorizer.zip \
+		--region us-east-1
+
 lambda-invoke:
 	@aws --endpoint-url=$(LOCALSTACK_ENDPOINT) lambda invoke \
 		--function-name $(LAMBDA_FUNCTION_NAME) \
@@ -97,3 +121,12 @@ lambda-invoke:
 		--region us-east-1 \
 		output.json
 	@cat output.json
+
+lambda-invoke-authorizer:
+	@aws --endpoint-url=$(LOCALSTACK_ENDPOINT) lambda invoke \
+		--function-name $(AUTHORIZER_FUNCTION_NAME) \
+		--cli-binary-format raw-in-base64-out \
+		--payload '{"headers": {"authorization": "Bearer token-de-teste"}}' \
+		--region us-east-1 \
+		output-authorizer.json
+	@cat output-authorizer.json
