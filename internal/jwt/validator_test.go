@@ -40,7 +40,7 @@ func TestValidateToken_RejectsTokenSignedWithDifferentSecret(t *testing.T) {
 }
 
 func TestValidateToken_RejectsExpiredToken(t *testing.T) {
-	g := NewGenerator("my-secret", -time.Minute) //
+	g := NewGenerator("my-secret", -time.Minute)
 	v := NewValidator("my-secret")
 
 	tokenString, err := g.GenerateToken("customer-123")
@@ -75,11 +75,10 @@ func TestValidateToken_RejectsUnexpectedSigningAlgorithm(t *testing.T) {
 	v := NewValidator("my-secret")
 
 	claims := jwt.RegisteredClaims{
-		Issuer:    expectedIssuer,
+		Issuer:    issuer,
 		Subject:   "customer-123",
 		ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour)),
 	}
-
 	tokenString, err := jwt.NewWithClaims(jwt.SigningMethodNone, claims).SignedString(jwt.UnsafeAllowNoneSignatureType)
 	if err != nil {
 		t.Fatalf("falha ao gerar token de teste: %v", err)

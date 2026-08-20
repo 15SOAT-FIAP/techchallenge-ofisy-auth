@@ -5,7 +5,7 @@ LOCALSTACK_ENDPOINT := http://localhost:4566
 LAMBDA_FUNCTION_NAME := ofisy-auth
 AUTHORIZER_FUNCTION_NAME := ofisy-auth-authorizer
 COVERAGE_THRESHOLD := 70
-COVERAGE_EXCLUDE := cmd/api/main.go|internal/auth/dto.go|internal/auth/types.go|internal/admin/dto.go
+COVERAGE_EXCLUDE := cmd/api/main.go|cmd/authorizer/main.go|internal/auth/dto.go|internal/auth/types.go|internal/admin/dto.go
 
 ci: tidy vet test-race build build-authorizer
 

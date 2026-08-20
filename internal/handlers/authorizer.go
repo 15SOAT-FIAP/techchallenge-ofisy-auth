@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"log/slog"
 	"strings"
 
 	"github.com/aws/aws-lambda-go/events"
@@ -25,15 +26,19 @@ func NewAuthorizerHandler(validator TokenValidator) *AuthorizerHandler {
 // Handle implementa um Lambda Authorizer do tipo REQUEST, com payload format
 // version 2.0 (resposta simples: só true/false + contexto opcional). Nunca
 // retorna erro pra fora - qualquer motivo de rejeição vira "não autorizado",
-// sem detalhar o porquê pro chamador.
+// sem detalhar o porquê pro chamador (o API Gateway só repassa isAuthorized
+// adiante). O motivo real de cada rejeição fica só nos logs, via slog -
+// mesmo padrão usado no AuthHandler.
 func (h *AuthorizerHandler) Handle(ctx context.Context, req events.APIGatewayV2CustomAuthorizerV2Request) (events.APIGatewayV2CustomAuthorizerSimpleResponse, error) {
 	token, ok := extractBearerToken(req.Headers)
 	if !ok {
+		slog.Warn("authorization denied: missing or malformed bearer token", "routeArn", req.RouteArn)
 		return deny(), nil
 	}
 
 	customerID, err := h.validator.ValidateToken(token)
 	if err != nil {
+		slog.Warn("authorization denied: invalid token", "error", err, "routeArn", req.RouteArn)
 		return deny(), nil
 	}
 
