@@ -30,6 +30,8 @@ techchallenge-ofisy-auth/
 │   ├── repositories/customers/  # consulta ao cliente por cpf/cnpj
 │   ├── usecases/                # regra de autenticação (Authenticate)
 │   └── validators/              # validação de CPF/CNPJ
+├── docs/
+│   └── TESTING.md               # testes unitários, de integração e análise estática
 ├── compose.yaml                 # LocalStack (Lambda) + Postgres local
 ├── compose.sonar.yaml           # SonarQube local para análise estática
 ├── sonar-project.properties     # configuração do scanner (fontes, testes, cobertura)
@@ -125,7 +127,6 @@ JWT_EXPIRATION=1h
 
 ```bash
 make dev-up     # sobe LocalStack (Lambda) + Postgres local (compose.yaml)
-make test       # roda os testes unitários com cobertura
 make vet        # go vet
 make build      # compila o binário bootstrap (linux/arm64)
 ```
@@ -146,20 +147,15 @@ make lambda-invoke     # invoca a função com um payload de teste
 docker exec -i postgres-auth-local-db psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" < scripts/seed.sql
 ```
 
-Além disso, os testes unitários (`internal/handlers`, `internal/usecases`, `internal/jwt`) cobrem os quatro caminhos de resposta (200/400/401/500) com dublês do banco e do gerador de token.
-
 `make dev-down` derruba o LocalStack e o Postgres local quando terminar.
 
-## Análise estática (SonarQube)
-
-O SonarQube roda localmente em container próprio (`compose.sonar.yaml`), separado do ambiente de desenvolvimento:
+## Testes e análise estática
 
 ```bash
-make sonar-up    # sobe o SonarQube em http://localhost:9000 (compose.sonar.yaml)
-make sonar       # roda os testes com cobertura e envia a análise ao SonarQube
-make sonar-down  # derruba o SonarQube
+make test              # testes unitários, rápido e sem Docker
+make test-integration  # camada de repositório com Testcontainers (exige Docker)
+make cover-check       # tudo junto, com o gate de cobertura de 70%
+make sonar             # análise estática no SonarQube local
 ```
 
-Na primeira execução, acesse `http://localhost:9000` (login inicial `admin`/`admin`), troque a senha e gere um token em *My Account > Security*. Grave-o como `SONAR_TOKEN` no `.env`, o `make sonar` falha com uma mensagem de orientação se a variável estiver ausente. Use `make sonar-logs` para acompanhar a subida do container, que leva cerca de um minuto.
-
-`make sonar` depende de `cover-check`, então reaproveita o `coverage.txt` gerado pelo `go test -covermode=atomic` e envia a cobertura junto com o código. O scanner roda via Docker (`sonarsource/sonar-scanner-cli`), sem precisar instalar nada localmente, e lê `sonar-project.properties`, onde os arquivos `*_test.go` são classificados como testes e `volume/`/`scripts/` ficam fora da análise.
+Consulte [`docs/TESTING.md`](docs/TESTING.md) para os detalhes: escopo de cada suíte, cenários cobertos na camada de repositório, gate de cobertura e configuração do SonarQube.
