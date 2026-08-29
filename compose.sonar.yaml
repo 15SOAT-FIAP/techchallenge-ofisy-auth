@@ -1,0 +1,17 @@
+services:
+  sonarqube:
+    image: sonarqube:community
+    container_name: sonarqube-auth
+    ports:
+      - "9000:9000"
+    environment:
+      - SONAR_ES_BOOTSTRAP_CHECKS_DISABLE=true
+    volumes:
+      - sonarqube_auth_data:/opt/sonarqube/data
+      - sonarqube_auth_logs:/opt/sonarqube/logs
+      - sonarqube_auth_extensions:/opt/sonarqube/extensions
+
+volumes:
+  sonarqube_auth_data:
+  sonarqube_auth_logs:
+  sonarqube_auth_extensions:

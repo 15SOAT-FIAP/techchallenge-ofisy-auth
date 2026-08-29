@@ -9,3 +9,4 @@ function.zip
 output.json
 coverage.txt
 coverage.filtered.txt
+.scannerwork/

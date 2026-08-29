@@ -1,11 +1,14 @@
 .PHONY: ci pre-commit build build-authorizer test test-race cover-check vet fmt fmt-check lint sec tidy run \
-	dev-up dev-down docker-build docker-build-authorizer clean lambda-seed lambda-deploy lambda-deploy-authorizer lambda-invoke lambda-invoke-authorizer
+	dev-up dev-down docker-build docker-build-authorizer clean lambda-seed lambda-deploy lambda-deploy-authorizer lambda-invoke lambda-invoke-authorizer sonar sonar-up sonar-down sonar-logs
 
 LOCALSTACK_ENDPOINT := http://localhost:4566
 LAMBDA_FUNCTION_NAME := ofisy-auth
 AUTHORIZER_FUNCTION_NAME := ofisy-auth-authorizer
+SONAR_COMPOSE_FILE := compose.sonar.yaml
+SONAR_HOST_URL := http://host.docker.internal:9000
+SONAR_SCANNER_IMAGE := sonarsource/sonar-scanner-cli:latest
 COVERAGE_THRESHOLD := 70
-COVERAGE_EXCLUDE := cmd/api/main.go|cmd/authorizer/main.go|internal/auth/dto.go|internal/auth/types.go|internal/admin/dto.go
+COVERAGE_EXCLUDE := /cmd/|/internal/models/
 
 ci: tidy vet test-race build build-authorizer
 
@@ -63,6 +66,28 @@ dev-up:
 
 dev-down:
 	@docker compose down
+
+sonar-up:
+	@docker compose -f $(SONAR_COMPOSE_FILE) up -d
+
+sonar-down:
+	@docker compose -f $(SONAR_COMPOSE_FILE) down
+
+sonar-logs:
+	@docker compose -f $(SONAR_COMPOSE_FILE) logs -f sonarqube
+
+sonar: cover-check
+	@set -a && . ./.env && set +a && \
+	if [ -z "$$SONAR_TOKEN" ]; then \
+		echo "SONAR_TOKEN não definido. Suba o SonarQube com 'make sonar-up', gere um token em My Account > Security e defina SONAR_TOKEN no .env"; \
+		exit 1; \
+	fi; \
+	docker run --rm \
+		--add-host=host.docker.internal:host-gateway \
+		-e SONAR_HOST_URL=$(SONAR_HOST_URL) \
+		-e SONAR_TOKEN="$$SONAR_TOKEN" \
+		-v "$(PWD):/usr/src" \
+		$(SONAR_SCANNER_IMAGE)
 
 docker-build:
 	@docker build -t ofisy-auth-lambda .
