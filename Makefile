@@ -1,4 +1,4 @@
-.PHONY: ci pre-commit build build-authorizer test test-race cover-check vet fmt fmt-check lint sec tidy run \
+.PHONY: ci pre-commit build build-authorizer test test-race test-integration cover-check vet fmt fmt-check lint sec tidy run \
 	dev-up dev-down docker-build docker-build-authorizer clean lambda-seed lambda-deploy lambda-deploy-authorizer lambda-invoke lambda-invoke-authorizer sonar sonar-up sonar-down sonar-logs
 
 LOCALSTACK_ENDPOINT := http://localhost:4566
@@ -25,7 +25,10 @@ test:
 	@go test ./... -cover
 
 test-race:
-	@CGO_ENABLED=1 go test ./... -race -coverprofile=coverage.txt -covermode=atomic
+	@CGO_ENABLED=1 go test -tags=integration ./... -race -coverprofile=coverage.txt -covermode=atomic
+
+test-integration:
+	@go test -tags=integration ./internal/repositories/... -count=1 -v
 
 cover-check: test-race
 	@grep -Ev "$(COVERAGE_EXCLUDE)" coverage.txt > coverage.filtered.txt

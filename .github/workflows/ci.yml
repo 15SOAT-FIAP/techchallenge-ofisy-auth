@@ -54,11 +54,11 @@ jobs:
       - name: Run tests
         env:
           CGO_ENABLED: 1
-        run: go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...
+        run: go test -tags=integration -v -race -coverprofile=coverage.txt -covermode=atomic ./...
 
       - name: Enforce coverage threshold
         run: |
-          grep -Ev "cmd/api/main.go|internal/auth/dto.go|internal/auth/types.go|internal/admin/dto.go" coverage.txt > coverage.filtered.txt
+          grep -Ev "/cmd/|/internal/models/" coverage.txt > coverage.filtered.txt
           COVERAGE=$(go tool cover -func=coverage.filtered.txt | awk '/^total:/ {gsub("%","",$3); print $3}')
           echo "Total coverage: ${COVERAGE}%"
           if awk "BEGIN {exit !($COVERAGE < 70)}"; then
