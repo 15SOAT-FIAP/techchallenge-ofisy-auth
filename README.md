@@ -125,6 +125,8 @@ JWT_EXPIRATION=1h
 
 ## Rodando o projeto
 
+`make` sem argumentos lista todos os alvos disponíveis, agrupados por finalidade. Os principais:
+
 ```bash
 make dev-up     # sobe LocalStack (Lambda) + Postgres local (compose.yaml)
 make vet        # go vet
