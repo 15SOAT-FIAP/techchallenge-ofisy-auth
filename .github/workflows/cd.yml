@@ -13,10 +13,14 @@ jobs:
     name: Publicar Imagem no ECR e Atualizar a Lambda
     runs-on: ubuntu-latest
     environment: AWS_ACADEMY
+    
+    concurrency:
+      group: deploy-auth
+      cancel-in-progress: false
 
     steps:
       - name: Checkout do código
-        uses: actions/checkout@v7
+        uses: actions/checkout@v4
 
       - name: Verificar se a CI passou para este commit
         env:
@@ -32,7 +36,7 @@ jobs:
           echo "CI Pipeline concluída com sucesso para este commit."
 
       - name: Configurar Credenciais AWS
-        uses: aws-actions/configure-aws-credentials@v6
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
