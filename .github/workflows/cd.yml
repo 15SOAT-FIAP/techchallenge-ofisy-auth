@@ -13,6 +13,10 @@ jobs:
     name: Publicar Imagem no ECR e Atualizar a Lambda
     runs-on: ubuntu-latest
     environment: AWS_ACADEMY
+    
+    concurrency:
+      group: deploy-auth
+      cancel-in-progress: false
 
     steps:
       - name: Checkout do código
