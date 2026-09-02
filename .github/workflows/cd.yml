@@ -86,6 +86,7 @@ jobs:
 
   deploy-authorizer-lambda:
     name: Publicar Imagem do Authorizer no ECR e Atualizar a Lambda
+    needs: deploy-lambda
     runs-on: ubuntu-latest
     environment: AWS_ACADEMY
     env:
