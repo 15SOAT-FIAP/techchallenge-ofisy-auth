@@ -6,6 +6,8 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
+const issuer = "techchallenge-ofisy-auth"
+
 type Generator struct {
 	secret     string
 	expiration time.Duration
@@ -21,7 +23,7 @@ func NewGenerator(secret string, expiration time.Duration) *Generator {
 func (j *Generator) GenerateToken(customerID string) (string, error) {
 	now := time.Now()
 	claims := jwt.RegisteredClaims{
-		Issuer:    "techchallenge-ofisy-auth",
+		Issuer:    issuer,
 		Subject:   customerID,
 		IssuedAt:  jwt.NewNumericDate(now),
 		ExpiresAt: jwt.NewNumericDate(now.Add(j.expiration)),

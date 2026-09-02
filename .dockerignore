@@ -1,0 +1,10 @@
+# tudo é ignorado por padrão, o Dockerfile copia apenas o que precisa
+*
+
+!cmd/
+!internal/
+!go.mod
+!go.sum
+
+**/.env
+**/*_test.go
