@@ -5,8 +5,6 @@ on:
 
 env:
   AWS_REGION: us-east-1
-  ECR_REPOSITORY: ofisy-auth
-  LAMBDA_FUNCTION_NAME: ofisy-auth
 
 jobs:
   deploy-lambda:
@@ -98,6 +96,10 @@ jobs:
     env:
       ECR_REPOSITORY: ofisy-auth-authorizer
       LAMBDA_FUNCTION_NAME: ofisy-auth-authorizer
+
+    concurrency:
+      group: deploy-auth-authorizer
+      cancel-in-progress: false
 
     steps:
       - name: Checkout do código
