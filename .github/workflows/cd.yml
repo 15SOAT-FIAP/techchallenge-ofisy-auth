@@ -2,6 +2,12 @@ name: Deploy da Lambda na AWS (CD)
 
 on:
   workflow_dispatch:
+  workflow_call:
+    outputs:
+      image_tag:
+        value: ${{ jobs.deploy-lambda.outputs.image_tag }}
+      authorizer_image_tag:
+        value: ${{ jobs.deploy-authorizer-lambda.outputs.image_tag }}
 
 env:
   AWS_REGION: us-east-1
@@ -11,6 +17,9 @@ jobs:
     name: Publicar Imagem no ECR e Atualizar a Lambda
     runs-on: ubuntu-latest
     environment: AWS_ACADEMY
+    outputs:
+      image_tag: ${{ steps.tag.outputs.image_tag }}
+      sha: ${{ steps.tag.outputs.sha }}
     env:
       ECR_REPOSITORY: ofisy-auth
       LAMBDA_FUNCTION_NAME: ofisy-auth
@@ -22,15 +31,18 @@ jobs:
     steps:
       - name: Checkout do código
         uses: actions/checkout@v7
+        with:
+          repository: 15SOAT-FIAP/techchallenge-ofisy-auth
 
       - name: Verificar se a CI passou para este commit
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          CONCLUSION=$(gh api "repos/${{ github.repository }}/actions/workflows/ci.yml/runs?head_sha=${{ github.sha }}&status=completed" --jq '.workflow_runs[0].conclusion')
+          SHA=$(git rev-parse HEAD)
+          CONCLUSION=$(gh api "repos/15SOAT-FIAP/techchallenge-ofisy-auth/actions/workflows/ci.yml/runs?head_sha=$SHA&status=completed" --jq '.workflow_runs[0].conclusion')
 
           if [ "$CONCLUSION" != "success" ]; then
-            echo "A CI Pipeline não terminou com sucesso para o commit ${{ github.sha }} (conclusion=$CONCLUSION)."
+            echo "A CI Pipeline não terminou com sucesso para o commit $SHA (conclusion=$CONCLUSION)."
             exit 1
           fi
 
@@ -45,7 +57,12 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Definir Tag da Imagem
-        run: echo "IMAGE_TAG=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+        id: tag
+        run: |
+          IMAGE_TAG=$(git rev-parse --short HEAD)
+          echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
+          echo "image_tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
+          echo "sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
 
       - name: Login no Amazon ECR
         run: |
@@ -93,6 +110,8 @@ jobs:
     needs: deploy-lambda
     runs-on: ubuntu-latest
     environment: AWS_ACADEMY
+    outputs:
+      image_tag: ${{ steps.tag.outputs.image_tag }}
     env:
       ECR_REPOSITORY: ofisy-auth-authorizer
       LAMBDA_FUNCTION_NAME: ofisy-auth-authorizer
@@ -104,19 +123,10 @@ jobs:
     steps:
       - name: Checkout do código
         uses: actions/checkout@v7
-
-      - name: Verificar se a CI passou para este commit
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          CONCLUSION=$(gh api "repos/${{ github.repository }}/actions/workflows/ci.yml/runs?head_sha=${{ github.sha }}&status=completed" --jq '.workflow_runs[0].conclusion')
-
-          if [ "$CONCLUSION" != "success" ]; then
-            echo "A CI Pipeline não terminou com sucesso para o commit ${{ github.sha }} (conclusion=$CONCLUSION)."
-            exit 1
-          fi
-
-          echo "CI Pipeline concluída com sucesso para este commit."
+        with:
+          repository: 15SOAT-FIAP/techchallenge-ofisy-auth
+          # Mesmo commit do job anterior, que já validou a CI
+          ref: ${{ needs.deploy-lambda.outputs.sha }}
 
       - name: Configurar Credenciais AWS
         uses: aws-actions/configure-aws-credentials@v6
@@ -127,7 +137,11 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Definir Tag da Imagem
-        run: echo "IMAGE_TAG=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+        id: tag
+        run: |
+          IMAGE_TAG=${{ needs.deploy-lambda.outputs.image_tag }}
+          echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
+          echo "image_tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
 
       - name: Login no Amazon ECR
         run: |

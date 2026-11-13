@@ -161,3 +161,16 @@ make sonar             # análise estática no SonarQube local
 ```
 
 Consulte [`docs/TESTING.md`](docs/TESTING.md) para os detalhes: escopo de cada suíte, cenários cobertos na camada de repositório, gate de cobertura e configuração do SonarQube.
+
+## Deploy (CD)
+
+O workflow `cd.yml` publica as imagens `ofisy-auth` e `ofisy-auth-authorizer` no ECR (tag = SHA curto do commit) e, se as funções já existirem, atualiza o código de cada Lambda. Ele só roda se a CI tiver passado para o commit. É a etapa 3 da [ordem de execução](https://github.com/15SOAT-FIAP/techchallenge-ofisy-eks-infra#ordem-de-execução-entre-os-repositórios) descrita no `techchallenge-ofisy-eks-infra`.
+
+Além do `workflow_dispatch`, ele aceita `workflow_call` e é chamado pelo `up.yml` do [ofisy-platform](https://github.com/15SOAT-FIAP/ofisy-platform), com os secrets vindo por `secrets: inherit`. Quando chamado de outro repositório, o checkout usa a branch padrão (`master`) deste repositório. As tags publicadas saem como outputs, para a etapa 5 (`deploy-auth-lambda.yml` do eks-infra) criar as funções:
+
+| Output | Imagem |
+| :--- | :--- |
+| `image_tag` | `ofisy-auth` |
+| `authorizer_image_tag` | `ofisy-auth-authorizer` |
+
+Este repositório não tem workflow de destroy: as funções são destruídas pelo `infra-auth/` e os ECRs pelo `infra/`, ambos no eks-infra.
