@@ -14,7 +14,7 @@ env:
 
 jobs:
   deploy-lambda:
-    name: Publicar Imagem no ECR e Atualizar a Lambda
+    name: Imagem Auth
     runs-on: ubuntu-latest
     environment: AWS_ACADEMY
     outputs:
@@ -106,7 +106,7 @@ jobs:
           echo "- Imagem: ${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}" >> $GITHUB_STEP_SUMMARY
 
   deploy-authorizer-lambda:
-    name: Publicar Imagem do Authorizer no ECR e Atualizar a Lambda
+    name: Imagem Authorizer
     needs: deploy-lambda
     runs-on: ubuntu-latest
     environment: AWS_ACADEMY
